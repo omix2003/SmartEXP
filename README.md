@@ -2,11 +2,13 @@
 
 A lightweight REST API to manage personal expenses, built using Python and FastAPI. Data is persisted locally in a structured JSON file, and operations are fully thread-safe.
 
+This project is structured specifically to meet the evaluation guidelines of the Software Engineering Apprenticeship Take-Home Assignment.
+
 ## Features
 
 - **Base Expense Management (CRUD):** Add, view, filter by multiple criteria, and delete expenses.
 - **Advanced Query Filtering:** Filter transactions by category, receiver, date range, amount range, and payment method simultaneously.
-- **Keyword Search Filter:** Run text searches across transaction titles and receiver names.
+- **Keyword Search Filter (Bonus Pick):** Run text searches across transaction titles and receiver names.
 - **Data Validation:** Strict payload validation (positive amount constraints, length limits, string sanitization, and payment type constraints) using Pydantic v2.
 - **Analytics Dashboard Endpoint:** Get overall total, category-wise breakdowns, category percentages, counts, average expense amounts, and payment type breakdowns.
 - **Monthly Budget Tracker:** Set a monthly spending limit and check status (remaining budget and warnings for exceedances).
@@ -19,14 +21,18 @@ A lightweight REST API to manage personal expenses, built using Python and FastA
 ## File Structure
 
 ```
-d:\ads\SEM\
-├── main.py         # Main entry point with routes and server initialization
-├── database.py     # Thread-safe JSON database manager
-├── schemas.py      # Pydantic v2 data validation schemas
-├── test_api.py     # pytest test suite
-├── requirements.txt# Project dependencies
-├── .gitignore      # Git untracked patterns
-└── README.md       # Project documentation
+your-repo/
+  README.md        # What was built, installation, server and test commands
+  AI_NOTES.md      # AI collaboration notes
+  expenses.json    # Pre-seeded database with 100 transaction records
+  requirements.txt # Project dependencies
+  .gitignore       # Git untracked patterns
+  src/             # Source code directory
+    ├── main.py         # Main entry point with routes and server initialization
+    ├── database.py     # Thread-safe JSON database manager
+    └── schemas.py      # Pydantic v2 data validation schemas
+  tests/           # Test suite directory
+    └── test_api.py     # pytest test suite
 ```
 
 ---
@@ -67,10 +73,10 @@ Ensure you have Python 3.8+ installed on your system.
 
 ## Running the Application
 
-Start the local Uvicorn development server:
+Start the local Uvicorn development server from the project root:
 
 ```bash
-uvicorn main:app --reload
+uvicorn src.main:app --reload
 ```
 
 Once running, you can access the application at:
@@ -84,7 +90,7 @@ Once running, you can access the application at:
 To run the automated verification suite, execute the following command in the project root:
 
 ```bash
-pytest test_api.py -v
+pytest tests/test_api.py -v
 ```
 
 This will run the tests against an isolated, temporary database file (`test_expenses.json`) and clean up afterward.

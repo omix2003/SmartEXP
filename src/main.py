@@ -1,3 +1,8 @@
+import sys
+import os
+# Ensure that the directory containing this file is in the search path for module imports
+sys.path.insert(0, os.path.dirname(__file__))
+
 from fastapi import FastAPI, HTTPException, Query, status, Response
 from typing import List, Optional
 import uuid

@@ -1,7 +1,11 @@
 import os
+import sys
 import pytest
 from datetime import date, timedelta
 from fastapi.testclient import TestClient
+
+# Inject the src/ directory into the python module lookup path before importing main
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../src")))
 
 # Set testing environment variable before importing main
 os.environ["DATABASE_FILEPATH"] = "test_expenses.json"
