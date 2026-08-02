@@ -1,8 +1,17 @@
-from fastapi import FastAPI, HTTPException, Query, status
+from fastapi import FastAPI, HTTPException, Query, status, Response
 from typing import List, Optional
 import uuid
+import csv
+import io
+from datetime import date
 from database import JSONDatabase
-from schemas import ExpenseCreate, ExpenseResponse
+from schemas import (
+    ExpenseCreate,
+    ExpenseResponse,
+    BudgetLimit,
+    BudgetStatusResponse,
+    AnalyticsResponse
+)
 
 app = FastAPI(
     title="Smart Expense Tracker API",
@@ -26,6 +35,106 @@ def read_expenses(category: Optional[str] = Query(None, description="Filter expe
     """Retrieve all expenses, optionally filtered by category."""
     return db.get_expenses(category=category)
 
+@app.get("/expenses/analytics", response_model=AnalyticsResponse, status_code=status.HTTP_200_OK)
+def get_analytics():
+    """Retrieve detailed analytics on expenses, including category breakdown and percentages."""
+    expenses = db.get_expenses()
+    total_count = len(expenses)
+    if total_count == 0:
+        return AnalyticsResponse(
+            overall_total=0.0,
+            average_expense=0.0,
+            total_count=0,
+            category_breakdown={},
+            category_percentages={}
+        )
+
+    overall_total = sum(exp["amount"] for exp in expenses)
+    average_expense = overall_total / total_count
+
+    category_breakdown = {}
+    for exp in expenses:
+        cat = exp["category"]
+        category_breakdown[cat] = category_breakdown.get(cat, 0.0) + exp["amount"]
+
+    category_percentages = {}
+    for cat, amt in category_breakdown.items():
+        category_percentages[cat] = round((amt / overall_total) * 100.0, 2)
+        category_breakdown[cat] = round(amt, 2)
+
+    return AnalyticsResponse(
+        overall_total=round(overall_total, 2),
+        average_expense=round(average_expense, 2),
+        total_count=total_count,
+        category_breakdown=category_breakdown,
+        category_percentages=category_percentages
+    )
+
+@app.get("/expenses/export", status_code=status.HTTP_200_OK)
+def export_expenses():
+    """Export all expenses to a CSV file."""
+    expenses = db.get_expenses()
+    
+    output = io.StringIO()
+    writer = csv.writer(output)
+    
+    writer.writerow(["id", "title", "amount", "category", "date"])
+    
+    for exp in expenses:
+        writer.writerow([
+            exp.get("id"),
+            exp.get("title"),
+            exp.get("amount"),
+            exp.get("category"),
+            exp.get("date")
+        ])
+    
+    csv_content = output.getvalue()
+    output.close()
+    
+    return Response(
+        content=csv_content,
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=expenses.csv"}
+    )
+
+@app.get("/budget", response_model=BudgetStatusResponse, status_code=status.HTTP_200_OK)
+def get_budget_status():
+    """Calculate and return the monthly budget status based on current calendar month spending."""
+    budget_limit = db.get_budget_limit()
+    
+    today = date.today()
+    current_year = today.year
+    current_month = today.month
+    
+    expenses = db.get_expenses()
+    current_month_spending = 0.0
+    for exp in expenses:
+        try:
+            exp_date = date.fromisoformat(exp["date"])
+            if exp_date.year == current_year and exp_date.month == current_month:
+                current_month_spending += exp["amount"]
+        except (ValueError, TypeError):
+            continue
+            
+    remaining_budget = budget_limit - current_month_spending
+    is_exceeded = False
+    if budget_limit > 0.0 and current_month_spending > budget_limit:
+        is_exceeded = True
+        
+    return BudgetStatusResponse(
+        monthly_budget=round(budget_limit, 2),
+        current_month_spending=round(current_month_spending, 2),
+        remaining_budget=round(remaining_budget, 2),
+        is_exceeded=is_exceeded
+    )
+
+@app.post("/budget", response_model=BudgetLimit, status_code=status.HTTP_200_OK)
+def set_budget(budget: BudgetLimit):
+    """Set the monthly budget limit."""
+    db.set_budget_limit(budget.limit)
+    return budget
+
 @app.delete("/expenses/{expense_id}", status_code=status.HTTP_200_OK)
 def delete_expense(expense_id: str):
     """Delete an expense by its unique ID. Returns 404 if not found."""
@@ -39,3 +148,4 @@ def delete_expense(expense_id: str):
         "success": True,
         "message": "Expense successfully deleted"
     }
+
