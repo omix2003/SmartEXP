@@ -4,8 +4,8 @@ from typing import List, Dict, Any, Optional
 from threading import Lock
 
 class JSONDatabase:
-    def __init__(self, filepath: str = "expenses.json"):
-        self.filepath = filepath
+    def __init__(self, filepath: Optional[str] = None):
+        self.filepath = filepath or os.environ.get("DATABASE_FILEPATH", "expenses.json")
         self.lock = Lock()
         self._init_db()
 
