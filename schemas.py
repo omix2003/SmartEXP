@@ -1,12 +1,12 @@
 from pydantic import BaseModel, Field, field_validator
-from datetime import date
+import datetime
 from typing import Optional, Dict, Any
 
 class ExpenseBase(BaseModel):
     title: str = Field(..., min_length=1, max_length=100)
     amount: float = Field(..., gt=0.0)
     category: str = Field(..., min_length=1, max_length=50)
-    date: date = Field(default_factory=date.today)
+    date: datetime.date = Field(default_factory=datetime.date.today)
 
     @field_validator("title", "category", mode="before")
     @classmethod
