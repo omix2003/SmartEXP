@@ -4,11 +4,11 @@ A lightweight REST API to manage personal expenses, built using Python and FastA
 
 ## Features
 
-- **Base Expense Management (CRUD):** Add, view, filter by category (case-insensitive), and delete expenses.
-- **Data Validation:** Strict payload validation (positive amount constraints, length limits, string sanitization) using Pydantic v2.
-- **Analytics Dashboard Endpoint:** Get overall total, category-wise breakdowns, category percentages, counts, and average expense amounts.
+- **Base Expense Management (CRUD):** Add, view, filter by category and/or receiver (case-insensitive), and delete expenses.
+- **Data Validation:** Strict payload validation (positive amount constraints, length limits, string sanitization, and payment type constraints) using Pydantic v2.
+- **Analytics Dashboard Endpoint:** Get overall total, category-wise breakdowns, category percentages, counts, average expense amounts, and payment type breakdowns.
 - **Monthly Budget Tracker:** Set a monthly spending limit and check status (remaining budget and warnings for exceedances).
-- **Data Export:** Export all tracked expenses directly into a downloadable CSV spreadsheet.
+- **Data Export:** Export all tracked expenses directly into a downloadable CSV spreadsheet including all transaction metadata.
 - **Interactive Documentation:** Automatic OpenAPI documentation page generated at `/docs`.
 - **Automated Test Suite:** Full suite of unit tests with a mock database setup using pytest.
 
@@ -100,35 +100,43 @@ This will run the tests against an isolated, temporary database file (`test_expe
   ```json
   {
     "title": "Groceries",
-    "amount": 54.20,
+    "amount": 1250.00,
     "category": "Food",
-    "date": "2026-08-02"
+    "payment_type": "mobile_payment",
+    "receiver": "Kirana Shop"
   }
   ```
+  *Note: Allowed values for `payment_type` are: `cash`, `credit_card`, `debit_card`, `bank_transfer`, `mobile_payment`.*
 - **Response Example (201 Created):**
   ```json
   {
-    "id": "f51270b2-78d1-4db5-9e6a-2d449339e8ba",
+    "id": "e5d8a9e7-578d-4e92-ba78-2d88a104fa2f",
     "title": "Groceries",
-    "amount": 54.2,
+    "amount": 1250.0,
     "category": "food",
-    "date": "2026-08-02"
+    "date": "2026-08-02",
+    "payment_type": "mobile_payment",
+    "receiver": "Kirana Shop"
   }
   ```
 
 #### View All Expenses
 - **Method:** `GET`
 - **Path:** `/expenses`
-- **Query Parameter:** `category` (optional, string for category filter)
+- **Query Parameters:** 
+  - `category` (optional, string for category filter)
+  - `receiver` (optional, string for receiver filter, case-insensitive substring match)
 - **Response Example (200 OK):**
   ```json
   [
     {
-      "id": "f51270b2-78d1-4db5-9e6a-2d449339e8ba",
+      "id": "e5d8a9e7-578d-4e92-ba78-2d88a104fa2f",
       "title": "Groceries",
-      "amount": 54.2,
+      "amount": 1250.0,
       "category": "food",
-      "date": "2026-08-02"
+      "date": "2026-08-02",
+      "payment_type": "mobile_payment",
+      "receiver": "Kirana Shop"
     }
   ]
   ```
@@ -154,14 +162,17 @@ This will run the tests against an isolated, temporary database file (`test_expe
 - **Response Example (200 OK):**
   ```json
   {
-    "overall_total": 54.2,
-    "average_expense": 54.2,
+    "overall_total": 1250.0,
+    "average_expense": 1250.0,
     "total_count": 1,
     "category_breakdown": {
-      "food": 54.2
+      "food": 1250.0
     },
     "category_percentages": {
       "food": 100.0
+    },
+    "payment_type_breakdown": {
+      "mobile_payment": 1250.0
     }
   }
   ```
@@ -169,7 +180,7 @@ This will run the tests against an isolated, temporary database file (`test_expe
 #### Export to CSV
 - **Method:** `GET`
 - **Path:** `/expenses/export`
-- **Response:** CSV file download (`expenses.csv`).
+- **Response:** CSV file download (`expenses.csv`). Columns exported: `id`, `title`, `amount`, `category`, `date`, `payment_type`, `receiver`.
 
 #### Get Monthly Budget Status
 - **Method:** `GET`
@@ -177,9 +188,9 @@ This will run the tests against an isolated, temporary database file (`test_expe
 - **Response Example (200 OK):**
   ```json
   {
-    "monthly_budget": 500.0,
-    "current_month_spending": 54.2,
-    "remaining_budget": 445.8,
+    "monthly_budget": 45000.0,
+    "current_month_spending": 1250.0,
+    "remaining_budget": 43750.0,
     "is_exceeded": false
   }
   ```
@@ -190,12 +201,12 @@ This will run the tests against an isolated, temporary database file (`test_expe
 - **Body Example:**
   ```json
   {
-    "limit": 500.00
+    "limit": 45000.00
   }
   ```
 - **Response Example (200 OK):**
   ```json
   {
-    "limit": 500.0
+    "limit": 45000.0
   }
   ```
