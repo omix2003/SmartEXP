@@ -31,13 +31,16 @@ def create_expense(expense: ExpenseCreate):
     return new_expense
 
 @app.get("/expenses", response_model=List[ExpenseResponse], status_code=status.HTTP_200_OK)
-def read_expenses(category: Optional[str] = Query(None, description="Filter expenses by category (case-insensitive)")):
-    """Retrieve all expenses, optionally filtered by category."""
-    return db.get_expenses(category=category)
+def read_expenses(
+    category: Optional[str] = Query(None, description="Filter expenses by category (case-insensitive)"),
+    receiver: Optional[str] = Query(None, description="Filter expenses by receiver (case-insensitive substring match)")
+):
+    """Retrieve all expenses, optionally filtered by category and/or receiver."""
+    return db.get_expenses(category=category, receiver=receiver)
 
 @app.get("/expenses/analytics", response_model=AnalyticsResponse, status_code=status.HTTP_200_OK)
 def get_analytics():
-    """Retrieve detailed analytics on expenses, including category breakdown and percentages."""
+    """Retrieve detailed analytics on expenses, including category and payment type breakdowns."""
     expenses = db.get_expenses()
     total_count = len(expenses)
     if total_count == 0:
@@ -46,28 +49,37 @@ def get_analytics():
             average_expense=0.0,
             total_count=0,
             category_breakdown={},
-            category_percentages={}
+            category_percentages={},
+            payment_type_breakdown={}
         )
 
     overall_total = sum(exp["amount"] for exp in expenses)
     average_expense = overall_total / total_count
 
     category_breakdown = {}
+    payment_type_breakdown = {}
     for exp in expenses:
         cat = exp["category"]
+        ptype = exp.get("payment_type", "cash")
+        
         category_breakdown[cat] = category_breakdown.get(cat, 0.0) + exp["amount"]
+        payment_type_breakdown[ptype] = payment_type_breakdown.get(ptype, 0.0) + exp["amount"]
 
     category_percentages = {}
     for cat, amt in category_breakdown.items():
         category_percentages[cat] = round((amt / overall_total) * 100.0, 2)
         category_breakdown[cat] = round(amt, 2)
 
+    for ptype, amt in payment_type_breakdown.items():
+        payment_type_breakdown[ptype] = round(amt, 2)
+
     return AnalyticsResponse(
         overall_total=round(overall_total, 2),
         average_expense=round(average_expense, 2),
         total_count=total_count,
         category_breakdown=category_breakdown,
-        category_percentages=category_percentages
+        category_percentages=category_percentages,
+        payment_type_breakdown=payment_type_breakdown
     )
 
 @app.get("/expenses/export", status_code=status.HTTP_200_OK)
@@ -78,7 +90,7 @@ def export_expenses():
     output = io.StringIO()
     writer = csv.writer(output)
     
-    writer.writerow(["id", "title", "amount", "category", "date"])
+    writer.writerow(["id", "title", "amount", "category", "date", "payment_type", "receiver"])
     
     for exp in expenses:
         writer.writerow([
@@ -86,7 +98,9 @@ def export_expenses():
             exp.get("title"),
             exp.get("amount"),
             exp.get("category"),
-            exp.get("date")
+            exp.get("date"),
+            exp.get("payment_type", "cash"),
+            exp.get("receiver", "")
         ])
     
     csv_content = output.getvalue()
@@ -148,4 +162,3 @@ def delete_expense(expense_id: str):
         "success": True,
         "message": "Expense successfully deleted"
     }
-

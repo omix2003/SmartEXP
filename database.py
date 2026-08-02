@@ -30,14 +30,17 @@ class JSONDatabase:
         with open(self.filepath, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=4)
 
-    def get_expenses(self, category: Optional[str] = None) -> List[Dict[str, Any]]:
-        """Retrieves all expenses, optionally filtered by category (case-insensitive)."""
+    def get_expenses(self, category: Optional[str] = None, receiver: Optional[str] = None) -> List[Dict[str, Any]]:
+        """Retrieves all expenses, optionally filtered by category and/or receiver (case-insensitive)."""
         with self.lock:
             data = self._read_db()
             expenses = data.get("expenses", [])
             if category:
                 category_lower = category.lower().strip()
-                return [exp for exp in expenses if exp.get("category", "").lower() == category_lower]
+                expenses = [exp for exp in expenses if exp.get("category", "").lower() == category_lower]
+            if receiver:
+                receiver_lower = receiver.lower().strip()
+                expenses = [exp for exp in expenses if receiver_lower in exp.get("receiver", "").lower()]
             return expenses
 
     def get_expense_by_id(self, expense_id: str) -> Optional[Dict[str, Any]]:
