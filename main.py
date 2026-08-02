@@ -33,10 +33,25 @@ def create_expense(expense: ExpenseCreate):
 @app.get("/expenses", response_model=List[ExpenseResponse], status_code=status.HTTP_200_OK)
 def read_expenses(
     category: Optional[str] = Query(None, description="Filter expenses by category (case-insensitive)"),
-    receiver: Optional[str] = Query(None, description="Filter expenses by receiver (case-insensitive substring match)")
+    receiver: Optional[str] = Query(None, description="Filter expenses by receiver (case-insensitive substring match)"),
+    start_date: Optional[date] = Query(None, description="Filter expenses starting from this date (inclusive, YYYY-MM-DD)"),
+    end_date: Optional[date] = Query(None, description="Filter expenses up to this date (inclusive, YYYY-MM-DD)"),
+    min_amount: Optional[float] = Query(None, description="Filter expenses with amount greater than or equal to this value", gt=0.0),
+    max_amount: Optional[float] = Query(None, description="Filter expenses with amount less than or equal to this value", gt=0.0),
+    payment_type: Optional[str] = Query(None, description="Filter expenses by payment type (case-insensitive)"),
+    search: Optional[str] = Query(None, description="General search query matching title or receiver (case-insensitive substring match)")
 ):
-    """Retrieve all expenses, optionally filtered by category and/or receiver."""
-    return db.get_expenses(category=category, receiver=receiver)
+    """Retrieve all expenses, optionally filtered by category, receiver, date range, amount range, payment type, and search keyword."""
+    return db.get_expenses(
+        category=category,
+        receiver=receiver,
+        start_date=start_date,
+        end_date=end_date,
+        min_amount=min_amount,
+        max_amount=max_amount,
+        payment_type=payment_type,
+        search=search
+    )
 
 @app.get("/expenses/analytics", response_model=AnalyticsResponse, status_code=status.HTTP_200_OK)
 def get_analytics():

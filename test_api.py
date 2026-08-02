@@ -1,6 +1,6 @@
 import os
 import pytest
-from datetime import date
+from datetime import date, timedelta
 from fastapi.testclient import TestClient
 
 # Set testing environment variable before importing main
@@ -116,6 +116,67 @@ def test_get_expenses_and_filtering():
     assert response.status_code == 200
     expenses = response.json()
     assert len(expenses) == 0
+
+def test_additional_filters():
+    """Verify amount range, date range, payment method, and search keyword filtering."""
+    today = date.today()
+    yesterday = today - timedelta(days=1)
+    tomorrow = today + timedelta(days=1)
+
+    # Seed transactions
+    client.post("/expenses", json={"title": "Tacos", "amount": 15.00, "category": "Food", "payment_type": "cash", "receiver": "Zomato Delivery", "date": str(yesterday)})
+    client.post("/expenses", json={"title": "Electric Bill", "amount": 120.00, "category": "Utilities", "payment_type": "bank_transfer", "receiver": "Power Grid Inc", "date": str(today)})
+    client.post("/expenses", json={"title": "Laptop", "amount": 1500.00, "category": "Shopping", "payment_type": "credit_card", "receiver": "Amazon Store", "date": str(tomorrow)})
+
+    # Filter by min_amount
+    response = client.get("/expenses?min_amount=100.00")
+    assert len(response.json()) == 2
+    
+    # Filter by max_amount
+    response = client.get("/expenses?max_amount=150.00")
+    assert len(response.json()) == 2
+
+    # Filter by amount range
+    response = client.get("/expenses?min_amount=20.00&max_amount=500.00")
+    assert len(response.json()) == 1
+    assert response.json()[0]["title"] == "Electric Bill"
+
+    # Filter by start_date
+    response = client.get(f"/expenses?start_date={str(today)}")
+    assert len(response.json()) == 2
+
+    # Filter by end_date
+    response = client.get(f"/expenses?end_date={str(today)}")
+    assert len(response.json()) == 2
+
+    # Filter by date range
+    response = client.get(f"/expenses?start_date={str(yesterday)}&end_date={str(today)}")
+    assert len(response.json()) == 2
+
+    # Filter by payment_type
+    response = client.get("/expenses?payment_type=credit_card")
+    assert len(response.json()) == 1
+    assert response.json()[0]["title"] == "Laptop"
+
+    # Search filter matching title
+    response = client.get("/expenses?search=tacos")
+    assert len(response.json()) == 1
+    assert response.json()[0]["title"] == "Tacos"
+
+    # Search filter matching receiver (substring match)
+    response = client.get("/expenses?search=amazon")
+    assert len(response.json()) == 1
+    assert response.json()[0]["title"] == "Laptop"
+
+    # Search filter matching receiver (case-insensitive substring)
+    response = client.get("/expenses?search=  deliv ")
+    assert len(response.json()) == 1
+    assert response.json()[0]["title"] == "Tacos"
+
+    # Combined complex filtering with search
+    response = client.get(f"/expenses?min_amount=10.00&max_amount=200.00&start_date={str(yesterday)}&payment_type=cash&search=zomato")
+    assert len(response.json()) == 1
+    assert response.json()[0]["title"] == "Tacos"
 
 def test_analytics():
     """Verify calculations of total, average, category breakdown, and payment type breakdown."""

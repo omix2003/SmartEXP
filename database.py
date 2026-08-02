@@ -2,6 +2,7 @@ import json
 import os
 from typing import List, Dict, Any, Optional
 from threading import Lock
+from datetime import date
 
 class JSONDatabase:
     def __init__(self, filepath: Optional[str] = None):
@@ -30,17 +31,53 @@ class JSONDatabase:
         with open(self.filepath, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=4)
 
-    def get_expenses(self, category: Optional[str] = None, receiver: Optional[str] = None) -> List[Dict[str, Any]]:
-        """Retrieves all expenses, optionally filtered by category and/or receiver (case-insensitive)."""
+    def get_expenses(
+        self,
+        category: Optional[str] = None,
+        receiver: Optional[str] = None,
+        start_date: Optional[date] = None,
+        end_date: Optional[date] = None,
+        min_amount: Optional[float] = None,
+        max_amount: Optional[float] = None,
+        payment_type: Optional[str] = None,
+        search: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        """Retrieves all expenses, optionally filtered by category, receiver, date range, amount range, payment type, and general search query."""
         with self.lock:
             data = self._read_db()
             expenses = data.get("expenses", [])
+            
             if category:
                 category_lower = category.lower().strip()
                 expenses = [exp for exp in expenses if exp.get("category", "").lower() == category_lower]
+                
             if receiver:
                 receiver_lower = receiver.lower().strip()
                 expenses = [exp for exp in expenses if receiver_lower in exp.get("receiver", "").lower()]
+                
+            if start_date:
+                expenses = [exp for exp in expenses if date.fromisoformat(exp["date"]) >= start_date]
+                
+            if end_date:
+                expenses = [exp for exp in expenses if date.fromisoformat(exp["date"]) <= end_date]
+                
+            if min_amount is not None:
+                expenses = [exp for exp in expenses if exp["amount"] >= min_amount]
+                
+            if max_amount is not None:
+                expenses = [exp for exp in expenses if exp["amount"] <= max_amount]
+                
+            if payment_type:
+                payment_type_clean = payment_type.strip().lower().replace(" ", "_")
+                expenses = [exp for exp in expenses if exp.get("payment_type", "").lower() == payment_type_clean]
+                
+            if search:
+                search_lower = search.lower().strip()
+                expenses = [
+                    exp for exp in expenses
+                    if search_lower in exp.get("title", "").lower() or search_lower in exp.get("receiver", "").lower()
+                ]
+                
             return expenses
 
     def get_expense_by_id(self, expense_id: str) -> Optional[Dict[str, Any]]:

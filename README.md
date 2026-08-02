@@ -4,7 +4,9 @@ A lightweight REST API to manage personal expenses, built using Python and FastA
 
 ## Features
 
-- **Base Expense Management (CRUD):** Add, view, filter by category and/or receiver (case-insensitive), and delete expenses.
+- **Base Expense Management (CRUD):** Add, view, filter by multiple criteria, and delete expenses.
+- **Advanced Query Filtering:** Filter transactions by category, receiver, date range, amount range, and payment method simultaneously.
+- **Keyword Search Filter:** Run text searches across transaction titles and receiver names.
 - **Data Validation:** Strict payload validation (positive amount constraints, length limits, string sanitization, and payment type constraints) using Pydantic v2.
 - **Analytics Dashboard Endpoint:** Get overall total, category-wise breakdowns, category percentages, counts, average expense amounts, and payment type breakdowns.
 - **Monthly Budget Tracker:** Set a monthly spending limit and check status (remaining budget and warnings for exceedances).
@@ -124,8 +126,14 @@ This will run the tests against an isolated, temporary database file (`test_expe
 - **Method:** `GET`
 - **Path:** `/expenses`
 - **Query Parameters:** 
-  - `category` (optional, string for category filter)
+  - `category` (optional, string for category filter, case-insensitive)
   - `receiver` (optional, string for receiver filter, case-insensitive substring match)
+  - `start_date` (optional, date string `YYYY-MM-DD` for filtering expenses starting from this date)
+  - `end_date` (optional, date string `YYYY-MM-DD` for filtering expenses up to this date)
+  - `min_amount` (optional, float for filtering expenses with amount greater than or equal to this value)
+  - `max_amount` (optional, float for filtering expenses with amount less than or equal to this value)
+  - `payment_type` (optional, string for matching payment type, case-insensitive)
+  - `search` (optional, string for keyword matching against both transaction `title` and `receiver` fields, case-insensitive substring match)
 - **Response Example (200 OK):**
   ```json
   [
